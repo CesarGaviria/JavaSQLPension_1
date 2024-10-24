@@ -1,31 +1,115 @@
 package com.mycompany.baseintro;
 
+import java.sql.*;
+import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
 
 public class Form extends javax.swing.JFrame {
 
     Conexion conectar = Conexion.getInstance();
     DefaultTableModel modelo = new DefaultTableModel();
-    
+
     public Form() {
         initComponents();
-        modelo = new DefaultTableModel(){
-												@Override
-            public boolean isCellEditable(int row, int column){
+        modelo = new DefaultTableModel() {
+            @Override
+            public boolean isCellEditable(int row, int column) {
                 return false;//tabla no editable 
             }
         };
         tblDetail.setModel(modelo);
         //Definir columnas
-       modelo.addColumn("ID");
-       modelo.addColumn("Document Type");
-       modelo.addColumn("Number");
-       modelo.addColumn("Name");
-       modelo.addColumn("Birth Date");
-       modelo.addColumn("Gender");
-       modelo.addColumn("Pension");
-       modelo.addColumn("Health");
-       
+        modelo.addColumn("ID");
+        modelo.addColumn("Document Type");
+        modelo.addColumn("Number");
+        modelo.addColumn("Name");
+        modelo.addColumn("Birth Date");
+        modelo.addColumn("Gender");
+        modelo.addColumn("Pension");
+        modelo.addColumn("Health");
+        tblDetail.getTableHeader().setReorderingAllowed(false);
+        cargarDatos();
+        int[] anchoCol = {20, 30, 30, 120, 30, 15, 50, 50};
+        for (int i = 0; i < anchoCol.length; i++) {
+            tblDetail.getColumnModel().getColumn(i).setPreferredWidth(anchoCol[i]);
+
+        }
+    }
+
+    private void cargarDatos() {
+        Connection conexion = null;
+        PreparedStatement listar = null;
+        ResultSet consulta = null;
+        try {
+            conexion = conectar.connect();
+            modelo.setRowCount(0);
+            listar = conexion.prepareStatement("SELECT * FROM person");
+            consulta = listar.executeQuery();
+            while (consulta.next()) {
+                Object[] fila = new Object[8];
+                fila[0] = consulta.getInt("id");
+                fila[1] = consulta.getString("documentType");
+                fila[2] = consulta.getString("number");
+                fila[3] = consulta.getString("name");
+                fila[4] = consulta.getString("BirthDate");
+                fila[5] = consulta.getString("Gender");
+                fila[6] = consulta.getString("pension");
+                fila[7] = consulta.getString("health");
+                modelo.addRow(fila);
+            }
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "Error al cargar datos: " + e.getMessage(),
+            "Error", JOptionPane.ERROR_MESSAGE);
+        } finally {
+            try {
+                if (consulta != null) {
+                    consulta.close();
+                }
+
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(null, "Algo a salido mal");
+            }
+        }
+    }
+
+    private boolean validarCampos() {
+        if (cbxDocumentType.getSelectedIndex() == 0 || cbxDocumentType.getSelectedItem().toString().equals("Seleccione")) {
+            mostrarError("Seleccione un tipo de documento");
+            cbxDocumentType.requestFocus();
+            return false;
+        }
+        if(txtDocumentNumber.getText().trim().isEmpty()){
+        mostrarError("El numero de documento es requerido");
+        return false;
+        }
+        if(txtName.getText().trim().isEmpty()){
+        mostrarError("El nombre es requerido");
+        return false;
+        }
+        if(dtBirthDate.getDate()== null){
+        mostrarError("El cumpleaños es requerido");
+        return false;
+        }
+        if(gender == null){
+        mostrarError("El genero es requerido");
+        return false;
+        }
+        if(fondo == null){
+        mostrarError("El fondo es requerido");
+        return false;
+        }
+        if(health == null){
+        mostrarError("La salud es requerida");
+        return false;
+        }
+        
+        return true;
+               
+    }
+
+    private void mostrarError(String mensaje) {
+        JOptionPane.showMessageDialog(this,mensaje,"Error de validacion",JOptionPane.ERROR_MESSAGE);
     }
 
     @SuppressWarnings("unchecked")
@@ -293,16 +377,16 @@ public class Form extends javax.swing.JFrame {
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel4Layout.createSequentialGroup()
                 .addGap(22, 22, 22)
-                .addComponent(btnSave, javax.swing.GroupLayout.PREFERRED_SIZE, 54, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(btnSave, javax.swing.GroupLayout.PREFERRED_SIZE, 74, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(18, 18, 18)
+                .addComponent(btnEdit, javax.swing.GroupLayout.PREFERRED_SIZE, 74, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(btnEdit, javax.swing.GroupLayout.PREFERRED_SIZE, 53, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(btnDelete, javax.swing.GroupLayout.PREFERRED_SIZE, 70, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addGap(18, 18, 18)
-                .addComponent(btnDelete)
-                .addGap(25, 25, 25)
                 .addComponent(btnClean, javax.swing.GroupLayout.PREFERRED_SIZE, 72, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
+                .addGap(41, 41, 41)
                 .addComponent(btnExit, javax.swing.GroupLayout.PREFERRED_SIZE, 58, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(187, Short.MAX_VALUE))
+                .addContainerGap(108, Short.MAX_VALUE))
         );
         jPanel4Layout.setVerticalGroup(
             jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -376,19 +460,19 @@ public class Form extends javax.swing.JFrame {
 
     private void chkFondoPrivadoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chkFondoPrivadoActionPerformed
         fondo = "Fondo privado";
-      
+
     }//GEN-LAST:event_chkFondoPrivadoActionPerformed
 
     private void chkColpensionesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chkColpensionesActionPerformed
-        fondo = "Colpensiones";        
+        fondo = "Colpensiones";
     }//GEN-LAST:event_chkColpensionesActionPerformed
 
     private void chkNuevaEPSActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chkNuevaEPSActionPerformed
-        health = "Nueva eps";       
+        health = "Nueva eps";
     }//GEN-LAST:event_chkNuevaEPSActionPerformed
 
     private void chkCompensarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chkCompensarActionPerformed
-        health = "Compensar";    
+        health = "Compensar";
     }//GEN-LAST:event_chkCompensarActionPerformed
 
     public static void main(String args[]) {
