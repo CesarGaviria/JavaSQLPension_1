@@ -1,6 +1,10 @@
 package com.mycompany.baseintro;
 
+import java.awt.event.KeyEvent;
 import java.sql.*;
+import java.text.SimpleDateFormat;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
 
@@ -79,37 +83,117 @@ public class Form extends javax.swing.JFrame {
             cbxDocumentType.requestFocus();
             return false;
         }
-        if(txtDocumentNumber.getText().trim().isEmpty()){
-        mostrarError("El numero de documento es requerido");
-        return false;
+        if (txtDocumentNumber.getText().trim().isEmpty()) {
+            mostrarError("El numero de documento es requerido");
+            return false;
         }
-        if(txtName.getText().trim().isEmpty()){
-        mostrarError("El nombre es requerido");
-        return false;
+        if (txtName.getText().trim().isEmpty()) {
+            mostrarError("El nombre es requerido");
+            return false;
         }
-        if(dtBirthDate.getDate()== null){
-        mostrarError("El cumpleaños es requerido");
-        return false;
+        if (dtBirthDate.getDate() == null) {
+            mostrarError("El cumpleaños es requerido");
+            return false;
         }
-        if(gender == null){
-        mostrarError("El genero es requerido");
-        return false;
+        if (gender == null) {
+            mostrarError("El genero es requerido");
+            return false;
         }
-        if(fondo == null){
-        mostrarError("El fondo es requerido");
-        return false;
+        if (fondo == null) {
+            mostrarError("El fondo es requerido");
+            return false;
         }
-        if(health == null){
-        mostrarError("La salud es requerida");
-        return false;
+        if (health == null) {
+            mostrarError("La salud es requerida");
+            return false;
         }
-        
+
         return true;
-               
+
     }
 
     private void mostrarError(String mensaje) {
-        JOptionPane.showMessageDialog(this,mensaje,"Error de validacion",JOptionPane.ERROR_MESSAGE);
+        JOptionPane.showMessageDialog(this, mensaje, "Error de validacion", JOptionPane.ERROR_MESSAGE);
+    }
+
+    private boolean validarFormatoDocumento(String tipo, String numero) {
+        numero = numero.trim();
+        tipo = tipo.trim();
+
+        switch (tipo) {
+            case "Tarjeta Identidad":
+            case "Cedula Ciudadania":
+            case "Registro Civil":
+                if (!numero.matches("\\d{7,11}")) {
+                    mostrarError(tipo + " debe tener entre 8 y 11 dígitos numéricos");
+                    return false;
+                }
+                break;
+            case "Pasaporte":
+                if (!numero.matches("[A-Z]{2}\\d{6,7}")) {
+                    mostrarError("El pasaporte debe comenzar con 2 letras mayúsculas seguidas de 6 o 7 números");
+                    return false;
+                }
+                break;
+            case "Cedula Extranjeria":
+                if (!numero.matches("[A-Z]{2}\\d{7}")) {
+                    mostrarError("la cédula de extranjería debe comenzar con dos letras mayúsculas seguidas de 7 números");
+                    return false;
+                }
+                break;
+            default:
+                mostrarError("Tipo de documento no válido");
+                return false;
+        }
+        return true;
+    }
+
+    public void guardarPersona() {
+        if (!validarCampos()) {
+            return;
+        }
+        String numeroDocumento = txtDocumentNumber.getText().trim();
+        String tipoDocumento = cbxDocumentType.getSelectedItem().toString();
+        if (!validarFormatoDocumento(tipoDocumento, numeroDocumento)) {
+            return;
+        }
+        Date fechaNacimiento = (Date) dtBirthDate.getDate();
+        if (!validarFechaNacimiento(fechaNacimiento)) {
+            return;
+        }
+        try (Connection conexion = conectar.conectar()) {
+            String sql = "INSERT INTO persona(documentType, number,name,"
+            + "birthDate ,gender, pension, health"
+            + "VALUES (?,?,?,?,?,?,?)";
+            try (PreparedStatement guardar = conexion.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                guardar.setString(1, tipoDocumento);
+                guardar.setString(2, numeroDocumento);
+                guardar.setString(3, txtName.getText().trim());
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                guardar.setString(4, sdf.format(fechaNacimiento));
+                guardar.setString(5, genderSelected);
+                guardar.setString(6, fondo);
+                guardar.setString(7, health);
+
+                int filasAfectadas = guardar.executeUpdate();
+
+                if (filasAfectadas > 0) {
+                    try (ResultSet generatedKeys = guardar.getGeneratedKeys()) {
+                        if (generatedKeys.next()) {
+                            actualizarTablaYLimpiar();
+                            JOptionPane.showMessageDialog(this, "Datos registrados Exitosamente", "Exito", JOptionPane.INFORMATION_MESSAGE);
+                        }
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(this, "Datos NO registrados", "ERROR", JOptionPane.INFORMATION_MESSAGE);
+
+                }
+            }
+        } catch (SQLException e) {
+            Logger.getLogger(Form.class.getName()).log(Level.SEVERE, "Error al guardar");
+            JOptionPane.showMessageDialog(this, "Error al guardar", "ERROR", JOptionPane.INFORMATION_MESSAGE);
+        }
+
     }
 
     @SuppressWarnings("unchecked")
@@ -268,12 +352,22 @@ public class Form extends javax.swing.JFrame {
         jLabel3.setText("Document type");
 
         txtDocumentNumber.setEditable(false);
+        txtDocumentNumber.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyTyped(java.awt.event.KeyEvent evt) {
+                txtDocumentNumberKeyTyped(evt);
+            }
+        });
 
         cbxDocumentType.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Selections:", "TI", "CC", "CE", "PP", "RC" }));
 
         jLabel4.setText("Name");
 
         txtName.setEditable(false);
+        txtName.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyTyped(java.awt.event.KeyEvent evt) {
+                txtNameKeyTyped(evt);
+            }
+        });
 
         jLabel6.setText("Gender");
 
@@ -474,6 +568,20 @@ public class Form extends javax.swing.JFrame {
     private void chkCompensarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_chkCompensarActionPerformed
         health = "Compensar";
     }//GEN-LAST:event_chkCompensarActionPerformed
+
+    private void txtDocumentNumberKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_txtDocumentNumberKeyTyped
+        char c = evt.getKeyChar();
+        if (!Character.isDigit(c)) {
+            evt.consume();
+        }
+    }//GEN-LAST:event_txtDocumentNumberKeyTyped
+
+    private void txtNameKeyTyped(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_txtNameKeyTyped
+       char c = evt.getKeyChar();
+        if (!Character.isLetter(c) && c != ' ' && c != KeyEvent.VK_BACK_SPACE) {
+            evt.consume();
+        }
+    }//GEN-LAST:event_txtNameKeyTyped
 
     public static void main(String args[]) {
 
